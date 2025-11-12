@@ -53,9 +53,10 @@ config.resolver.extraNodeModules = {
     __dirname,
     "node_modules/@walletconnect/utils"
   ),
+  // @walletconnect/keyvaluestorage - use from fcl-js monorepo
   "@walletconnect/keyvaluestorage": path.resolve(
-    __dirname,
-    "node_modules/@walletconnect/keyvaluestorage/dist/react-native/index.js"
+    fclJsRoot,
+    "node_modules/@walletconnect/core/node_modules/@walletconnect/keyvaluestorage"
   ),
 
   // @onflow monorepo packages - map to workspace packages
@@ -114,8 +115,8 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   // Force WalletConnect keyvaluestorage to use React Native version
   if (moduleName === "@walletconnect/keyvaluestorage") {
     const wcModulePath = path.resolve(
-      __dirname,
-      "node_modules/@walletconnect/keyvaluestorage"
+      fclJsRoot,
+      "node_modules/@walletconnect/core/node_modules/@walletconnect/keyvaluestorage"
     );
     const reactNativeEntry = path.join(
       wcModulePath,

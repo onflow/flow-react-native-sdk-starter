@@ -73,35 +73,66 @@ const fclConfig = {
 };
 fcl.config(fclConfig);
 
-// Initialize WalletConnect plugin
-// @ts-ignore initLazy is exported but not in type definitions
-const { FclWcServicePlugin, clientPromise } = fcl.initLazy({
-  projectId: "9b70cfa398b2355a5eb9b1cf99f4a981",
-  metadata: {
-    name: "Flow Expo Starter",
-    description: "A Flow blockchain demo app built with Expo",
-    url: "https://flow-expo-starter.com",
-    icons: ["https://avatars.githubusercontent.com/u/62387156?v=4"],
-  },
-  // Manually add FRW wallet for testing with universal link for FRW (works on both iOS and Android)
-  wallets: [
-    {
-      name: "Flow Reference Wallet",
-      description: "Connect to Flow Reference Wallet via WalletConnect",
-      homepage: "https://frw.gitbook.io/",
-      uid: "https://link.wallet.flow.com/wc",
-      provider: {
-        name: "Flow Reference Wallet",
-        icon: "https://frw-link.s3.amazonaws.com/logo.png",
-        description: "Digital wallet created for everyone.",
-        website: "https://frw.gitbook.io/",
-      },
-    },
-  ],
+// Initialize WalletConnect plugin lazily to avoid Expo async require issues
+let clientPromiseResolver: ((client: any) => void) | null = null;
+const clientPromise = new Promise<any>((resolve) => {
+  clientPromiseResolver = resolve;
 });
 
-// Register the WalletConnect service plugin
-fcl.pluginRegistry.add(FclWcServicePlugin);
+let initializationPromise: Promise<void> | null = null;
+
+const initializeWalletConnect = async () => {
+  if (initializationPromise) {
+    return initializationPromise;
+  }
+
+  initializationPromise = (async () => {
+    try {
+      // @ts-ignore - initLazy is exported but not in type definitions
+      const { FclWcServicePlugin, clientPromise: wcClientPromise } = fcl.initLazy({
+        projectId: "9b70cfa398b2355a5eb9b1cf99f4a981",
+        metadata: {
+          name: "Flow Expo Starter",
+          description: "A Flow blockchain demo app built with Expo",
+          url: "https://flow-expo-starter.com",
+          icons: ["https://avatars.githubusercontent.com/u/62387156?v=4"],
+        },
+        // Manually add FRW wallet for testing with universal link for FRW (works on both iOS and Android)
+        wallets: [
+          {
+            name: "Flow Reference Wallet",
+            description: "Connect to Flow Reference Wallet via WalletConnect",
+            homepage: "https://frw.gitbook.io/",
+            uid: "https://link.wallet.flow.com/wc",
+            provider: {
+              name: "Flow Reference Wallet",
+              icon: "https://frw-link.s3.amazonaws.com/logo.png",
+              description: "Digital wallet created for everyone.",
+              website: "https://frw.gitbook.io/",
+            },
+          },
+        ],
+      });
+
+      // Resolve the client promise
+      const client = await wcClientPromise;
+      if (clientPromiseResolver) {
+        clientPromiseResolver(client);
+      }
+
+      // Register the WalletConnect service plugin
+      fcl.pluginRegistry.add(FclWcServicePlugin);
+    } catch (error) {
+      console.error("Failed to initialize WalletConnect:", error);
+      throw error;
+    }
+  })();
+
+  return initializationPromise;
+};
+
+// Start initialization immediately but don't block module loading
+initializeWalletConnect();
 
 // Clean up orphaned sessions immediately on app start
 // This handles the case where the wallet deleted the session while the app was closed
