@@ -74,6 +74,7 @@ const fclConfig = {
 fcl.config(fclConfig);
 
 // Initialize WalletConnect plugin
+// @ts-ignore initLazy is exported but not in type definitions
 const { FclWcServicePlugin, clientPromise } = fcl.initLazy({
   projectId: "9b70cfa398b2355a5eb9b1cf99f4a981",
   metadata: {

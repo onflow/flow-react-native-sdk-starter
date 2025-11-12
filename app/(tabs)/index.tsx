@@ -149,9 +149,9 @@ export default function FlowScreen() {
           }
         `,
         args: (arg: any, t: any) => [arg("Hello from Expo!", t.String)],
-        payer: fcl.authz,
-        proposer: fcl.authz,
-        authorizations: [fcl.authz],
+        payer: fcl.authz as any,
+        proposer: fcl.authz as any,
+        authorizations: [fcl.authz as any],
         limit: 50,
       });
 
