@@ -13,6 +13,8 @@ LogBox.ignoreLogs([
   "Falling back to file-based resolution",
   "emitting session_request",
   "without any listeners",
+  "Service Discovery Error",
+  "Failed to fetch services",
 ]);
 
 // Also ignore console.error for WalletConnect session request errors
@@ -22,7 +24,9 @@ console.error = (...args: any[]) => {
   const errorMessage = args.join(" ");
   if (
     errorMessage.includes("emitting session_request") ||
-    errorMessage.includes("without any listeners")
+    errorMessage.includes("without any listeners") ||
+    errorMessage.includes("Service Discovery Error") ||
+    errorMessage.includes("Failed to fetch services")
   ) {
     return; // Suppress these specific errors
   }
@@ -59,7 +63,6 @@ const flowConfig = {
 
 const currentNetwork = "testnet"; // Change to 'mainnet' for production
 
-// TODO: improve this
 // Configure FCL for Flow
 const fclConfig = {
   ...flowConfig[currentNetwork],
@@ -71,6 +74,13 @@ const fclConfig = {
   "walletconnect.projectId": "9b70cfa398b2355a5eb9b1cf99f4a981", // WalletConnect Project ID
   "flow.network": currentNetwork,
 };
+
+console.log("Flow network configured:", {
+  network: currentNetwork,
+  accessNode: fclConfig["accessNode.api"],
+  discovery: fclConfig["discovery.authn.endpoint"],
+});
+
 fcl.config(fclConfig);
 
 // Initialize WalletConnect plugin lazily to avoid Expo async require issues
@@ -88,7 +98,10 @@ const initializeWalletConnect = async () => {
 
   initializationPromise = (async () => {
     try {
+      console.log("Initializing WalletConnect...");
+
       // @ts-ignore - initLazy is exported but not in type definitions
+      console.log("Calling fcl.initLazy...");
       const { FclWcServicePlugin, clientPromise: wcClientPromise } = fcl.initLazy({
         projectId: "9b70cfa398b2355a5eb9b1cf99f4a981",
         metadata: {
@@ -113,15 +126,25 @@ const initializeWalletConnect = async () => {
           },
         ],
       });
+      console.log("fcl.initLazy completed, plugin created with services:", FclWcServicePlugin.services);
 
       // Resolve the client promise
+      console.log("Waiting for WalletConnect client promise...");
       const client = await wcClientPromise;
+      console.log("WalletConnect client promise resolved");
       if (clientPromiseResolver) {
         clientPromiseResolver(client);
       }
 
+      console.log("WalletConnect initialized successfully:", {
+        activeSessions: client.session.getAll().length,
+        projectId: "9b70cfa3...",
+      });
+
       // Register the WalletConnect service plugin
+      console.log("Registering plugin with services:", FclWcServicePlugin.services);
       fcl.pluginRegistry.add(FclWcServicePlugin);
+      console.log("WalletConnect plugin registered");
     } catch (error) {
       console.error("Failed to initialize WalletConnect:", error);
       throw error;
@@ -139,9 +162,16 @@ initializeWalletConnect();
 // We do this ASAP to prevent UI flicker
 export const sessionCleanupPromise = (async () => {
   try {
+    console.log("Checking for orphaned WalletConnect sessions...");
+
     // Wait for WalletConnect client to initialize
     const client = await clientPromise;
     const user = await fcl.currentUser.snapshot();
+
+    console.log("Session check status:", {
+      userLoggedIn: user.loggedIn,
+      userAddress: user.addr || null,
+    });
 
     if (user.loggedIn) {
       const hasWcService = user.services?.some(
@@ -149,10 +179,20 @@ export const sessionCleanupPromise = (async () => {
       );
       const activeSessions = client.session.getAll();
 
+      console.log("Session details:", {
+        hasWcService,
+        activeSessions: activeSessions.length,
+      });
+
       if (hasWcService && activeSessions.length === 0) {
         console.log("Cleaning up orphaned WalletConnect session");
         await fcl.unauthenticate();
+        console.log("Orphaned session cleaned up");
+      } else {
+        console.log("No orphaned sessions found");
       }
+    } else {
+      console.log("No active user session to check");
     }
   } catch (e) {
     // Ignore errors during cleanup as this is not critical

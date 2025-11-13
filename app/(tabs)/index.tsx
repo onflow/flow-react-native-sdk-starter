@@ -15,6 +15,19 @@ import {
   StyleSheet,
 } from "react-native";
 
+// Helper function to get transaction status name
+const getStatusName = (status: number): string => {
+  const statusNames: { [key: number]: string } = {
+    0: "UNKNOWN",
+    1: "PENDING",
+    2: "FINALIZED",
+    3: "EXECUTED",
+    4: "SEALED",
+    5: "EXPIRED",
+  };
+  return statusNames[status] || "UNKNOWN";
+};
+
 export default function FlowScreen() {
   const [user, setUser] = useState<any>({ loggedIn: null });
   const [isLoading, setIsLoading] = useState(false);
@@ -27,10 +40,17 @@ export default function FlowScreen() {
   useEffect(() => {
     // Wait for session cleanup before subscribing to avoid UI flicker
     sessionCleanupPromise.then(() => {
+      console.log("Session cleanup complete, ready to subscribe");
       setCleanupComplete(true);
     });
 
-    const unsubscribe = fcl.currentUser.subscribe((userData) => {
+    const unsubscribe = fcl.currentUser.subscribe((userData: any) => {
+      console.log("Auth state changed:", {
+        loggedIn: userData.loggedIn,
+        addr: userData.addr,
+        services: userData.services?.map((s: any) => s.type),
+      });
+
       // Only update user state after cleanup is complete to avoid flicker
       if (cleanupComplete || !userData.loggedIn) {
         setUser(userData);
@@ -51,6 +71,8 @@ export default function FlowScreen() {
 
   // Function: Disconnect Wallet
   const handleDisconnect = async () => {
+    console.log("Disconnecting wallet...");
+
     try {
       // Get the WalletConnect client from the imported clientPromise
       const client = await clientPromise;
@@ -58,8 +80,10 @@ export default function FlowScreen() {
       if (client) {
         // Get all sessions and disconnect them
         const sessions = client.session.getAll();
+        console.log(`Disconnecting ${sessions.length} WalletConnect session(s)`);
 
         for (const session of sessions) {
+          console.log(`  -> Disconnecting session: ${session.topic}`);
           await client.disconnect({
             topic: session.topic,
             reason: {
@@ -75,6 +99,7 @@ export default function FlowScreen() {
 
     // Unauthenticate from FCL (clears user state)
     await fcl.unauthenticate();
+    console.log("Wallet disconnected successfully");
 
     setScriptResult("");
     setTxStatus("");
@@ -86,6 +111,9 @@ export default function FlowScreen() {
       Alert.alert("Error", "Please connect wallet first");
       return;
     }
+
+    console.log("Executing script to get Flow token balance");
+    console.log(`  -> Address: ${user.addr}`);
 
     setIsLoading(true);
     setScriptResult("");
@@ -109,10 +137,13 @@ export default function FlowScreen() {
         args: (arg: any, t: any) => [arg(user.addr, t.Address)],
       });
 
+      console.log("Script executed successfully");
+      console.log(`  -> Balance: ${result} FLOW`);
+
       setScriptResult(`Balance: ${result} FLOW`);
     } catch (error: any) {
-      Alert.alert("Script Error", error.message);
       console.error("Script error:", error);
+      Alert.alert("Script Error", error.message);
     } finally {
       setIsLoading(false);
     }
@@ -128,12 +159,18 @@ export default function FlowScreen() {
     // Check if user has authz service
     const authzService = user.services?.find((s: any) => s.type === "authz");
     if (!authzService) {
+      console.error("No authorization service found");
       Alert.alert(
         "Error",
         "No authorization service found. Please reconnect wallet."
       );
       return;
     }
+
+    console.log("Sending transaction...");
+    console.log(`  -> Message: "Hello from Expo!"`);
+    console.log(`  -> Proposer: ${user.addr}`);
+    console.log(`  -> Payer: ${user.addr}`);
 
     setIsLoading(true);
     setTxStatus("Sending transaction...");
@@ -155,14 +192,19 @@ export default function FlowScreen() {
         limit: 50,
       });
 
+      console.log("Transaction sent!");
+      console.log(`  -> Transaction ID: ${transactionId}`);
+
       setTxStatus(`Transaction sent! ID: ${transactionId}`);
 
       // Subscribe to transaction status
       const unsub = fcl.tx(transactionId).subscribe((res: any) => {
+        console.log(`Transaction status: ${res.status} (${getStatusName(res.status)})`);
         setTxStatus(`Status: ${res.status}`);
 
         if (res.status === 4) {
           // SEALED
+          console.log("Transaction sealed!");
           setTxStatus("Transaction Sealed!");
           Alert.alert("Success", "Transaction completed!");
           unsub();
