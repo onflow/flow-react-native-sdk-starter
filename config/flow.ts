@@ -100,6 +100,13 @@ const initializeWalletConnect = async () => {
     try {
       console.log("Initializing WalletConnect...");
 
+      // Generate Expo-compatible redirect URI for automatic return after wallet approval
+      // This uses Expo Linking API which handles both Expo Go (exp://) and standalone builds (custom scheme)
+      // Using empty path redirects to the root route (index)
+      const ExpoLinking = await import("expo-linking");
+      const redirectUri = ExpoLinking.createURL("");
+      console.log("Generated redirect URI for WalletConnect:", redirectUri);
+
       // @ts-ignore - initLazy is exported but not in type definitions
       console.log("Calling fcl.initLazy...");
       const { FclWcServicePlugin, clientPromise: wcClientPromise } = fcl.initLazy({
@@ -110,6 +117,10 @@ const initializeWalletConnect = async () => {
           url: "https://flow-expo-starter.com",
           icons: ["https://avatars.githubusercontent.com/u/62387156?v=4"],
         },
+        // Redirect URI for wallet to automatically return to dApp after approval
+        // In Expo Go: exp://192.168.x.x:19000 (root route)
+        // In standalone: flowexpostarter:// (root route)
+        redirect: redirectUri,
         // Manually add FRW wallet for testing with universal link for FRW (works on both iOS and Android)
         wallets: [
           {

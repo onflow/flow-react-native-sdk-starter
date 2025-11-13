@@ -177,6 +177,7 @@ export default function FlowScreen() {
 
     try {
       // Simple transaction to log a message
+      console.log("Calling fcl.mutate...");
       const transactionId = await fcl.mutate({
         cadence: `
           transaction(message: String) {
@@ -192,6 +193,7 @@ export default function FlowScreen() {
         limit: 50,
       });
 
+      console.log("fcl.mutate completed!");
       console.log("Transaction sent!");
       console.log(`  -> Transaction ID: ${transactionId}`);
 
