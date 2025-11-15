@@ -26,6 +26,7 @@ const getStatusName = (status: number): string => {
 
 export default function FlowScreen() {
   const [user, setUser] = useState<any>({ loggedIn: null });
+  const [initialized, setInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [scriptResult, setScriptResult] = useState<string>("");
   const [txStatus, setTxStatus] = useState<string>("");
@@ -40,12 +41,16 @@ export default function FlowScreen() {
       });
 
       setUser(userData);
+      // Mark as initialized after first subscription update
+      if (!initialized) {
+        setInitialized(true);
+      }
     });
 
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [initialized]);
 
   // Function: Disconnect Wallet
   const handleDisconnect = async () => {
@@ -192,8 +197,8 @@ export default function FlowScreen() {
     }
   };
 
-  // Show loading state while initializing
-  if (user.loggedIn === null) {
+  // Show loading state only before first subscription update
+  if (!initialized) {
     return (
       <ThemedView style={styles.container}>
         <ActivityIndicator size="large" />
@@ -202,7 +207,7 @@ export default function FlowScreen() {
     );
   }
 
-  // Show authentication UI if not logged in
+  // Show authentication UI if not logged in (covers both null and false after initialization)
   if (!user.loggedIn) {
     return (
       <ThemedView style={styles.container}>
