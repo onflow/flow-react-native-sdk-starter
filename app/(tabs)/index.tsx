@@ -1,10 +1,6 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import {
-  clientPromise,
-  currentNetwork,
-  sessionCleanupPromise,
-} from "@/config/flow";
+import { currentNetwork } from "@/config/flow";
 import * as fcl from "@onflow/fcl-react-native";
 import { useEffect, useState } from "react";
 import {
@@ -33,17 +29,9 @@ export default function FlowScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [scriptResult, setScriptResult] = useState<string>("");
   const [txStatus, setTxStatus] = useState<string>("");
-  const [initTimeout, setInitTimeout] = useState(false);
-  const [cleanupComplete, setCleanupComplete] = useState(false);
 
   // Subscribe to authentication state
   useEffect(() => {
-    // Wait for session cleanup before subscribing to avoid UI flicker
-    sessionCleanupPromise.then(() => {
-      console.log("Session cleanup complete, ready to subscribe");
-      setCleanupComplete(true);
-    });
-
     const unsubscribe = fcl.currentUser.subscribe((userData: any) => {
       console.log("Auth state changed:", {
         loggedIn: userData.loggedIn,
@@ -51,56 +39,19 @@ export default function FlowScreen() {
         services: userData.services?.map((s: any) => s.type),
       });
 
-      // Only update user state after cleanup is complete to avoid flicker
-      if (cleanupComplete || !userData.loggedIn) {
-        setUser(userData);
-      }
+      setUser(userData);
     });
-
-    // Set timeout to force show UI after 3 seconds even if still initializing
-    const timeout = setTimeout(() => {
-      setInitTimeout(true);
-      setCleanupComplete(true); // Force cleanup complete on timeout
-    }, 3000);
 
     return () => {
       unsubscribe();
-      clearTimeout(timeout);
     };
-  }, [cleanupComplete]);
+  }, []);
 
   // Function: Disconnect Wallet
   const handleDisconnect = async () => {
     console.log("Disconnecting wallet...");
-
-    try {
-      // Get the WalletConnect client from the imported clientPromise
-      const client = await clientPromise;
-
-      if (client) {
-        // Get all sessions and disconnect them
-        const sessions = client.session.getAll();
-        console.log(`Disconnecting ${sessions.length} WalletConnect session(s)`);
-
-        for (const session of sessions) {
-          console.log(`  -> Disconnecting session: ${session.topic}`);
-          await client.disconnect({
-            topic: session.topic,
-            reason: {
-              code: 6000,
-              message: "User disconnected",
-            },
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error disconnecting WalletConnect sessions:", error);
-    }
-
-    // Unauthenticate from FCL (clears user state)
     await fcl.unauthenticate();
-    console.log("Wallet disconnected successfully");
-
+    console.log("Wallet disconnected");
     setScriptResult("");
     setTxStatus("");
   };
@@ -178,6 +129,9 @@ export default function FlowScreen() {
     try {
       // Simple transaction to log a message
       console.log("Calling fcl.mutate...");
+      console.log(
+        "Transaction will require signatures from: proposer, payer, and authorizations"
+      );
       const transactionId = await fcl.mutate({
         cadence: `
           transaction(message: String) {
@@ -193,36 +147,53 @@ export default function FlowScreen() {
         limit: 50,
       });
 
-      console.log("fcl.mutate completed!");
+      console.log("==============================================");
+      console.log("FCL.MUTATE COMPLETED SUCCESSFULLY!");
       console.log("Transaction sent!");
-      console.log(`  -> Transaction ID: ${transactionId}`);
+      console.log(`Transaction ID: ${transactionId}`);
+      console.log("This means all signing requests completed:");
+      console.log("  1. flow_pre_authz - completed");
+      console.log("  2. flow_authz (or flow_sign_*) - completed");
+      console.log("  3. Transaction submitted to network");
+      console.log("==============================================");
 
       setTxStatus(`Transaction sent! ID: ${transactionId}`);
 
+      // Show immediate success alert
+      Alert.alert(
+        "Transaction Submitted!",
+        `All signatures collected successfully!\n\nTransaction ID:\n${transactionId}\n\nNow waiting for network confirmation...`,
+        [{ text: "OK" }]
+      );
+
       // Subscribe to transaction status
       const unsub = fcl.tx(transactionId).subscribe((res: any) => {
-        console.log(`Transaction status: ${res.status} (${getStatusName(res.status)})`);
+        console.log(
+          `Transaction status: ${res.status} (${getStatusName(res.status)})`
+        );
         setTxStatus(`Status: ${res.status}`);
 
         if (res.status === 4) {
           // SEALED
           console.log("Transaction sealed!");
           setTxStatus("Transaction Sealed!");
-          Alert.alert("Success", "Transaction completed!");
+          Alert.alert("Success", "Transaction sealed on blockchain!");
           unsub();
         }
       });
     } catch (error: any) {
-      console.error("Transaction error:", error);
-      Alert.alert("Transaction Error", error.message);
+      console.error("Transaction error - Full error object:", error);
+      console.error("Transaction error - Message:", error?.message);
+      console.error("Transaction error - Stack:", error?.stack);
+      Alert.alert("Transaction Error", error?.message || "Unknown error");
       setTxStatus("");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Show loading state only if not timed out
-  if (user.loggedIn === null && !initTimeout) {
+  // Show loading state while initializing
+  if (user.loggedIn === null) {
     return (
       <ThemedView style={styles.container}>
         <ActivityIndicator size="large" />

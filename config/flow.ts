@@ -63,15 +63,29 @@ const flowConfig = {
 
 const currentNetwork = "testnet"; // Change to 'mainnet' for production
 
+// Initialize redirect URI for WalletConnect
+let redirectUri: string | null = null;
+(async () => {
+  const ExpoLinking = await import("expo-linking");
+  redirectUri = ExpoLinking.createURL("");
+  console.log("Generated redirect URI for WalletConnect:", redirectUri);
+
+  // Configure FCL with redirect URI
+  fcl.config({
+    "walletconnect.redirect": redirectUri,
+  });
+})();
+
 // Configure FCL for Flow
+// WalletConnect will auto-load when walletconnect.projectId is set
 const fclConfig = {
   ...flowConfig[currentNetwork],
   "app.detail.title": "Flow Expo Starter",
   "app.detail.url": "https://flow-expo-starter.com",
   "app.detail.icon": "https://avatars.githubusercontent.com/u/62387156?v=4",
   "app.detail.description": "A Flow blockchain demo app built with Expo",
-  "fcl.limit": 1000, // Compute limit for transactions
-  "walletconnect.projectId": "9b70cfa398b2355a5eb9b1cf99f4a981", // WalletConnect Project ID
+  "fcl.limit": 1000,
+  "walletconnect.projectId": "9b70cfa398b2355a5eb9b1cf99f4a981", // Auto-loads WalletConnect with Flow Reference Wallet
   "flow.network": currentNetwork,
 };
 
@@ -79,136 +93,9 @@ console.log("Flow network configured:", {
   network: currentNetwork,
   accessNode: fclConfig["accessNode.api"],
   discovery: fclConfig["discovery.authn.endpoint"],
+  walletConnect: "Auto-loading with Flow Reference Wallet",
 });
 
 fcl.config(fclConfig);
 
-// Initialize WalletConnect plugin lazily to avoid Expo async require issues
-let clientPromiseResolver: ((client: any) => void) | null = null;
-const clientPromise = new Promise<any>((resolve) => {
-  clientPromiseResolver = resolve;
-});
-
-let initializationPromise: Promise<void> | null = null;
-
-const initializeWalletConnect = async () => {
-  if (initializationPromise) {
-    return initializationPromise;
-  }
-
-  initializationPromise = (async () => {
-    try {
-      console.log("Initializing WalletConnect...");
-
-      // Generate Expo-compatible redirect URI for automatic return after wallet approval
-      // This uses Expo Linking API which handles both Expo Go (exp://) and standalone builds (custom scheme)
-      // Using empty path redirects to the root route (index)
-      const ExpoLinking = await import("expo-linking");
-      const redirectUri = ExpoLinking.createURL("");
-      console.log("Generated redirect URI for WalletConnect:", redirectUri);
-
-      // @ts-ignore - initLazy is exported but not in type definitions
-      console.log("Calling fcl.initLazy...");
-      const { FclWcServicePlugin, clientPromise: wcClientPromise } = fcl.initLazy({
-        projectId: "9b70cfa398b2355a5eb9b1cf99f4a981",
-        metadata: {
-          name: "Flow Expo Starter",
-          description: "A Flow blockchain demo app built with Expo",
-          url: "https://flow-expo-starter.com",
-          icons: ["https://avatars.githubusercontent.com/u/62387156?v=4"],
-        },
-        // Redirect URI for wallet to automatically return to dApp after approval
-        // In Expo Go: exp://192.168.x.x:19000 (root route)
-        // In standalone: flowexpostarter:// (root route)
-        redirect: redirectUri,
-        // Manually add FRW wallet for testing with universal link for FRW (works on both iOS and Android)
-        wallets: [
-          {
-            name: "Flow Reference Wallet",
-            description: "Connect to Flow Reference Wallet via WalletConnect",
-            homepage: "https://frw.gitbook.io/",
-            uid: "https://link.wallet.flow.com/wc",
-            provider: {
-              name: "Flow Reference Wallet",
-              icon: "https://frw-link.s3.amazonaws.com/logo.png",
-              description: "Digital wallet created for everyone.",
-              website: "https://frw.gitbook.io/",
-            },
-          },
-        ],
-      });
-      console.log("fcl.initLazy completed, plugin created with services:", FclWcServicePlugin.services);
-
-      // Resolve the client promise
-      console.log("Waiting for WalletConnect client promise...");
-      const client = await wcClientPromise;
-      console.log("WalletConnect client promise resolved");
-      if (clientPromiseResolver) {
-        clientPromiseResolver(client);
-      }
-
-      console.log("WalletConnect initialized successfully:", {
-        activeSessions: client.session.getAll().length,
-        projectId: "9b70cfa3...",
-      });
-
-      // Register the WalletConnect service plugin
-      console.log("Registering plugin with services:", FclWcServicePlugin.services);
-      fcl.pluginRegistry.add(FclWcServicePlugin);
-      console.log("WalletConnect plugin registered");
-    } catch (error) {
-      console.error("Failed to initialize WalletConnect:", error);
-      throw error;
-    }
-  })();
-
-  return initializationPromise;
-};
-
-// Start initialization immediately but don't block module loading
-initializeWalletConnect();
-
-// Clean up orphaned sessions immediately on app start
-// This handles the case where the wallet deleted the session while the app was closed
-// We do this ASAP to prevent UI flicker
-export const sessionCleanupPromise = (async () => {
-  try {
-    console.log("Checking for orphaned WalletConnect sessions...");
-
-    // Wait for WalletConnect client to initialize
-    const client = await clientPromise;
-    const user = await fcl.currentUser.snapshot();
-
-    console.log("Session check status:", {
-      userLoggedIn: user.loggedIn,
-      userAddress: user.addr || null,
-    });
-
-    if (user.loggedIn) {
-      const hasWcService = user.services?.some(
-        (s: any) => s.method === "WC/RPC"
-      );
-      const activeSessions = client.session.getAll();
-
-      console.log("Session details:", {
-        hasWcService,
-        activeSessions: activeSessions.length,
-      });
-
-      if (hasWcService && activeSessions.length === 0) {
-        console.log("Cleaning up orphaned WalletConnect session");
-        await fcl.unauthenticate();
-        console.log("Orphaned session cleaned up");
-      } else {
-        console.log("No orphaned sessions found");
-      }
-    } else {
-      console.log("No active user session to check");
-    }
-  } catch (e) {
-    // Ignore errors during cleanup as this is not critical
-    console.warn("Could not check for orphaned sessions:", e);
-  }
-})();
-
-export { clientPromise, currentNetwork };
+export { currentNetwork };
