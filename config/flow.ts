@@ -63,39 +63,37 @@ const flowConfig = {
 
 const currentNetwork = "testnet"; // Change to 'mainnet' for production
 
-// Initialize redirect URI for WalletConnect
-let redirectUri: string | null = null;
+// Initialize FCL configuration with redirect URI
+// IMPORTANT: This must be done asynchronously to ensure redirect URI is available
+// BEFORE WalletConnect initializes (which happens when walletconnect.projectId is set)
 (async () => {
   const ExpoLinking = await import("expo-linking");
-  redirectUri = ExpoLinking.createURL("");
+  const redirectUri = ExpoLinking.createURL("");
   console.log("Generated redirect URI for WalletConnect:", redirectUri);
 
-  // Configure FCL with redirect URI
-  fcl.config({
-    "walletconnect.redirect": redirectUri,
+  // Configure FCL with ALL settings including redirect
+  // This ensures redirect is available when WalletConnect auto-loads
+  const fclConfig = {
+    ...flowConfig[currentNetwork],
+    "app.detail.title": "Flow Expo Starter",
+    "app.detail.url": "https://flow-expo-starter.com",
+    "app.detail.icon": "https://avatars.githubusercontent.com/u/62387156?v=4",
+    "app.detail.description": "A Flow blockchain demo app built with Expo",
+    "fcl.limit": 1000,
+    "walletconnect.redirect": redirectUri, // Set redirect BEFORE projectId
+    "walletconnect.projectId": "9b70cfa398b2355a5eb9b1cf99f4a981", // Auto-loads WalletConnect with redirect configured
+    "flow.network": currentNetwork,
+  };
+
+  console.log("Flow network configured:", {
+    network: currentNetwork,
+    accessNode: fclConfig["accessNode.api"],
+    discovery: fclConfig["discovery.authn.endpoint"],
+    walletConnect: "Auto-loading with Flow Reference Wallet",
+    redirectUri: redirectUri,
   });
+
+  fcl.config(fclConfig);
 })();
-
-// Configure FCL for Flow
-// WalletConnect will auto-load when walletconnect.projectId is set
-const fclConfig = {
-  ...flowConfig[currentNetwork],
-  "app.detail.title": "Flow Expo Starter",
-  "app.detail.url": "https://flow-expo-starter.com",
-  "app.detail.icon": "https://avatars.githubusercontent.com/u/62387156?v=4",
-  "app.detail.description": "A Flow blockchain demo app built with Expo",
-  "fcl.limit": 1000,
-  "walletconnect.projectId": "9b70cfa398b2355a5eb9b1cf99f4a981", // Auto-loads WalletConnect with Flow Reference Wallet
-  "flow.network": currentNetwork,
-};
-
-console.log("Flow network configured:", {
-  network: currentNetwork,
-  accessNode: fclConfig["accessNode.api"],
-  discovery: fclConfig["discovery.authn.endpoint"],
-  walletConnect: "Auto-loading with Flow Reference Wallet",
-});
-
-fcl.config(fclConfig);
 
 export { currentNetwork };
