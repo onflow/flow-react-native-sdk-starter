@@ -68,6 +68,9 @@ const currentNetwork = "testnet"; // Change to 'mainnet' for production
 // BEFORE WalletConnect initializes (which happens when walletconnect.projectId is set)
 (async () => {
   const ExpoLinking = await import("expo-linking");
+  // Use default createURL() for Expo Go compatibility
+  // In Expo Go, this generates exp://... which Expo handles
+  // For production builds, this would use your custom scheme from app.json
   const redirectUri = ExpoLinking.createURL("");
   console.log("Generated redirect URI for WalletConnect:", redirectUri);
 

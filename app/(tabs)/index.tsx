@@ -209,19 +209,29 @@ export default function FlowScreen() {
 
   // Show authentication UI if not logged in (covers both null and false after initialization)
   if (!user.loggedIn) {
+    const handleConnect = async () => {
+      try {
+        await fcl.authenticate(); // Auto-shows modal with wallet selection!
+      } catch (error: any) {
+        if (error.message !== 'User cancelled authentication') {
+          Alert.alert('Authentication Error', error.message);
+        }
+      }
+    };
+
     return (
       <ThemedView style={styles.container}>
         <ThemedText type="title" style={styles.title}>
           Flow Expo Starter
         </ThemedText>
         <ThemedText style={styles.subtitle}>
-          Select a wallet to connect
+          Connect your wallet to get started
         </ThemedText>
         <ThemedText style={styles.networkBadge}>
           Network: {currentNetwork.toUpperCase()}
         </ThemedText>
 
-        <fcl.ServiceDiscovery fcl={fcl} />
+        <Button title="Connect Wallet" onPress={handleConnect} />
       </ThemedView>
     );
   }
