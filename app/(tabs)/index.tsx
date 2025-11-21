@@ -2,7 +2,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { currentNetwork } from "@/config/flow";
 import * as fcl from "@onflow/fcl-react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -31,6 +31,22 @@ export default function FlowScreen() {
   const [scriptResult, setScriptResult] = useState<string>("");
   const [txStatus, setTxStatus] = useState<string>("");
 
+  // Ref to track active transaction subscription for cleanup
+  const txUnsubscribeRef = useRef<(() => void) | null>(null);
+
+  // Cleanup function for transaction subscription
+  const cleanupTxSubscription = () => {
+    if (txUnsubscribeRef.current) {
+      txUnsubscribeRef.current();
+      txUnsubscribeRef.current = null;
+    }
+  };
+
+  // Cleanup transaction subscription on unmount
+  useEffect(() => {
+    return () => cleanupTxSubscription();
+  }, []);
+
   // Subscribe to authentication state
   useEffect(() => {
     const unsubscribe = fcl.currentUser.subscribe((userData: any) => {
@@ -55,6 +71,7 @@ export default function FlowScreen() {
   // Function: Disconnect Wallet
   const handleDisconnect = async () => {
     console.log("Disconnecting wallet...");
+    cleanupTxSubscription();
     await fcl.unauthenticate();
     console.log("Wallet disconnected");
     setScriptResult("");
@@ -128,6 +145,9 @@ export default function FlowScreen() {
     console.log(`  -> Proposer: ${user.addr}`);
     console.log(`  -> Payer: ${user.addr}`);
 
+    // Cleanup any existing transaction subscription before starting new one
+    cleanupTxSubscription();
+
     setIsLoading(true);
     setTxStatus("Sending transaction...");
 
@@ -171,19 +191,19 @@ export default function FlowScreen() {
         [{ text: "OK" }]
       );
 
-      // Subscribe to transaction status
-      const unsub = fcl.tx(transactionId).subscribe((res: any) => {
+      // Subscribe to transaction status and store unsubscribe in ref for cleanup
+      txUnsubscribeRef.current = fcl.tx(transactionId).subscribe((res: any) => {
         console.log(
           `Transaction status: ${res.status} (${getStatusName(res.status)})`
         );
-        setTxStatus(`Status: ${res.status}`);
+        setTxStatus(`Status: ${getStatusName(res.status)}`);
 
         if (res.status === 4) {
           // SEALED
           console.log("Transaction sealed!");
           setTxStatus("Transaction Sealed!");
           Alert.alert("Success", "Transaction sealed on blockchain!");
-          unsub();
+          cleanupTxSubscription();
         }
       });
     } catch (error: any) {
@@ -192,6 +212,7 @@ export default function FlowScreen() {
       console.error("Transaction error - Stack:", error?.stack);
       Alert.alert("Transaction Error", error?.message || "Unknown error");
       setTxStatus("");
+      cleanupTxSubscription();
     } finally {
       setIsLoading(false);
     }

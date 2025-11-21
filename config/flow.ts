@@ -63,40 +63,45 @@ const flowConfig = {
 
 const currentNetwork = "testnet"; // Change to 'mainnet' for production
 
-// Initialize FCL configuration with redirect URI
-// IMPORTANT: This must be done asynchronously to ensure redirect URI is available
-// BEFORE WalletConnect initializes (which happens when walletconnect.projectId is set)
-(async () => {
-  const ExpoLinking = await import("expo-linking");
-  // Use default createURL() for Expo Go compatibility
-  // In Expo Go, this generates exp://... which Expo handles
-  // For production builds, this would use your custom scheme from app.json
-  const redirectUri = ExpoLinking.createURL("");
-  console.log("Generated redirect URI for WalletConnect:", redirectUri);
+// Initialize FCL configuration
+// Redirect URI is now auto-detected by fcl-react-native using expo-linking
+const fclConfig = {
+  ...flowConfig[currentNetwork],
+  "app.detail.title": "Flow Expo Starter",
+  "app.detail.url": "https://flow-expo-starter.com",
+  "app.detail.icon": "https://avatars.githubusercontent.com/u/62387156?v=4",
+  "app.detail.description": "A Flow blockchain demo app built with Expo",
+  "fcl.limit": 1000,
+  // Debug-only: Add Flow Wallet with native deep link for testing with debug builds
+  // Production builds work fine with Discovery API (uses universal links)
+  // But debug builds can't verify App Links, so we add this with native scheme
+  "walletconnect.wallets": [
+    {
+      name: "Flow Wallet (Debug)",
+      description: "Digital wallet created for everyone.",
+      homepage: "https://wallet.flow.com",
+      uid: "frw://wc", // Native deep link - works in debug builds
+      provider: {
+        name: "Flow Wallet (Debug)",
+        icon: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDI1MCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMF8xN182OTM0KSI+CjxyZWN0IHdpZHRoPSIyNTAiIGhlaWdodD0iMjUwIiBmaWxsPSIjMkNERTc4Ii8+CjxjaXJjbGUgY3g9IjEyNSIgY3k9IjEyNSIgcj0iODMiIGZpbGw9IndoaXRlIi8+CjxyZWN0IHg9IjExNCIgeT0iMTEyIiB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIGZpbGw9IiM0MUNDNUQiLz4KPHJlY3QgeD0iMTM4IiB5PSIxMTIiIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iYmxhY2siLz4KPC9nPgo8ZGVmcz4KPGNsaXBQYXRoIGlkPSJjbGlwMF8xN182OTM0Ij4KPHJlY3Qgd2lkdGg9IjI1MCIgaGVpZ2h0PSIyNTAiIGZpbGw9IndoaXRlIi8+CjwvY2xpcFBhdGg+CjwvZGVmcz4KPC9zdmc+Cg==",
+        description: "Digital wallet created for everyone.",
+        website: "https://core.flow.com",
+        address: "debug-0xc7efa8c33fceee03", // Unique address to avoid React key collision
+        color: "#41CC5D",
+      },
+    },
+  ],
+  "walletconnect.projectId": "9b70cfa398b2355a5eb9b1cf99f4a981", // Auto-loads WalletConnect (redirect auto-detected)
+  "flow.network": currentNetwork,
+};
 
-  // Configure FCL with ALL settings including redirect
-  // This ensures redirect is available when WalletConnect auto-loads
-  const fclConfig = {
-    ...flowConfig[currentNetwork],
-    "app.detail.title": "Flow Expo Starter",
-    "app.detail.url": "https://flow-expo-starter.com",
-    "app.detail.icon": "https://avatars.githubusercontent.com/u/62387156?v=4",
-    "app.detail.description": "A Flow blockchain demo app built with Expo",
-    "fcl.limit": 1000,
-    "walletconnect.redirect": redirectUri, // Set redirect BEFORE projectId
-    "walletconnect.projectId": "9b70cfa398b2355a5eb9b1cf99f4a981", // Auto-loads WalletConnect with redirect configured
-    "flow.network": currentNetwork,
-  };
+console.log("Flow network configured:", {
+  network: currentNetwork,
+  accessNode: fclConfig["accessNode.api"],
+  discovery: fclConfig["discovery.authn.endpoint"],
+  walletConnect: "Auto-loading with Flow Reference Wallet (redirect auto-detected)",
+});
 
-  console.log("Flow network configured:", {
-    network: currentNetwork,
-    accessNode: fclConfig["accessNode.api"],
-    discovery: fclConfig["discovery.authn.endpoint"],
-    walletConnect: "Auto-loading with Flow Reference Wallet",
-    redirectUri: redirectUri,
-  });
-
-  fcl.config(fclConfig);
-})();
+fcl.config(fclConfig);
 
 export { currentNetwork };
