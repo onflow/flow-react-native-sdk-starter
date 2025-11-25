@@ -1,5 +1,6 @@
 // IMPORTANT: Flow config must be imported first (it includes crypto polyfill)
-import "../config/flow"; // Initialize Flow configuration
+// Initialize Flow configuration
+import "../config/flow";
 
 import { ConnectModalProvider } from "@onflow/fcl-react-native";
 import {
@@ -25,10 +26,6 @@ export default function RootLayout() {
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="modal"
-            options={{ presentation: "modal", title: "Modal" }}
-          />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>

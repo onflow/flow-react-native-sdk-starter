@@ -2,16 +2,21 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { currentNetwork } from "@/config/flow";
 import * as fcl from "@onflow/fcl-react-native";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Button,
+  Image,
+  Linking,
+  Pressable,
   ScrollView,
   StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
-// Helper function to get transaction status name
+const FlowLogo = require("@/assets/flow.png");
+
 const getStatusName = (status: number): string => {
   const statusNames: { [key: number]: string } = {
     0: "UNKNOWN",
@@ -28,13 +33,12 @@ export default function FlowScreen() {
   const [user, setUser] = useState<any>({ loggedIn: null });
   const [initialized, setInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSendingTx, setIsSendingTx] = useState(false);
   const [scriptResult, setScriptResult] = useState<string>("");
   const [txStatus, setTxStatus] = useState<string>("");
 
-  // Ref to track active transaction subscription for cleanup
   const txUnsubscribeRef = useRef<(() => void) | null>(null);
 
-  // Cleanup function for transaction subscription
   const cleanupTxSubscription = () => {
     if (txUnsubscribeRef.current) {
       txUnsubscribeRef.current();
@@ -42,57 +46,47 @@ export default function FlowScreen() {
     }
   };
 
-  // Cleanup transaction subscription on unmount
   useEffect(() => {
     return () => cleanupTxSubscription();
   }, []);
 
-  // Subscribe to authentication state
   useEffect(() => {
     const unsubscribe = fcl.currentUser.subscribe((userData: any) => {
-      console.log("Auth state changed:", {
-        loggedIn: userData.loggedIn,
-        addr: userData.addr,
-        services: userData.services?.map((s: any) => s.type),
-      });
-
       setUser(userData);
-      // Mark as initialized after first subscription update
       if (!initialized) {
         setInitialized(true);
       }
     });
-
-    return () => {
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [initialized]);
 
-  // Function: Disconnect Wallet
+  const handleConnect = async () => {
+    try {
+      await fcl.authenticate();
+    } catch (error: any) {
+      if (error.message !== "User cancelled authentication") {
+        Alert.alert("Authentication Error", error.message);
+      }
+    }
+  };
+
   const handleDisconnect = async () => {
-    console.log("Disconnecting wallet...");
     cleanupTxSubscription();
     await fcl.unauthenticate();
-    console.log("Wallet disconnected");
     setScriptResult("");
     setTxStatus("");
   };
 
-  // Function: Execute Script (Read blockchain)
-  const handleExecuteScript = async () => {
+  const handleGetBalance = async () => {
     if (!user.loggedIn) {
       Alert.alert("Error", "Please connect wallet first");
       return;
     }
 
-    console.log("Executing script to get Flow token balance");
-    console.log(`  -> Address: ${user.addr}`);
-
     setIsLoading(true);
     setScriptResult("");
 
     try {
-      // Simple script to get Flow token balance
       const result = await fcl.query({
         cadence: `
           import FlowToken from 0x7e60df042a9c0868
@@ -110,29 +104,22 @@ export default function FlowScreen() {
         args: (arg: any, t: any) => [arg(user.addr, t.Address)],
       });
 
-      console.log("Script executed successfully");
-      console.log(`  -> Balance: ${result} FLOW`);
-
-      setScriptResult(`Balance: ${result} FLOW`);
+      setScriptResult(`${result} FLOW`);
     } catch (error: any) {
-      console.error("Script error:", error);
       Alert.alert("Script Error", error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Function: Send Transaction (Write blockchain)
   const handleSendTransaction = async () => {
     if (!user.loggedIn) {
       Alert.alert("Error", "Please connect wallet first");
       return;
     }
 
-    // Check if user has authz service
     const authzService = user.services?.find((s: any) => s.type === "authz");
     if (!authzService) {
-      console.error("No authorization service found");
       Alert.alert(
         "Error",
         "No authorization service found. Please reconnect wallet."
@@ -140,23 +127,11 @@ export default function FlowScreen() {
       return;
     }
 
-    console.log("Sending transaction...");
-    console.log(`  -> Message: "Hello from Expo!"`);
-    console.log(`  -> Proposer: ${user.addr}`);
-    console.log(`  -> Payer: ${user.addr}`);
-
-    // Cleanup any existing transaction subscription before starting new one
     cleanupTxSubscription();
-
-    setIsLoading(true);
-    setTxStatus("Sending transaction...");
+    setIsSendingTx(true);
+    setTxStatus("Sending...");
 
     try {
-      // Simple transaction to log a message
-      console.log("Calling fcl.mutate...");
-      console.log(
-        "Transaction will require signatures from: proposer, payer, and authorizations"
-      );
       const transactionId = await fcl.mutate({
         cadence: `
           transaction(message: String) {
@@ -172,147 +147,195 @@ export default function FlowScreen() {
         limit: 50,
       });
 
-      console.log("==============================================");
-      console.log("FCL.MUTATE COMPLETED SUCCESSFULLY!");
-      console.log("Transaction sent!");
-      console.log(`Transaction ID: ${transactionId}`);
-      console.log("This means all signing requests completed:");
-      console.log("  1. flow_pre_authz - completed");
-      console.log("  2. flow_authz (or flow_sign_*) - completed");
-      console.log("  3. Transaction submitted to network");
-      console.log("==============================================");
+      if (!transactionId) {
+        setTxStatus("");
+        setIsSendingTx(false);
+        return;
+      }
 
-      setTxStatus(`Transaction sent! ID: ${transactionId}`);
+      setTxStatus(`Submitted: ${transactionId.slice(0, 8)}...`);
+      setIsSendingTx(false);
 
-      // Show immediate success alert
-      Alert.alert(
-        "Transaction Submitted!",
-        `All signatures collected successfully!\n\nTransaction ID:\n${transactionId}\n\nNow waiting for network confirmation...`,
-        [{ text: "OK" }]
-      );
-
-      // Subscribe to transaction status and store unsubscribe in ref for cleanup
       txUnsubscribeRef.current = fcl.tx(transactionId).subscribe((res: any) => {
-        console.log(
-          `Transaction status: ${res.status} (${getStatusName(res.status)})`
-        );
-        setTxStatus(`Status: ${getStatusName(res.status)}`);
+        setTxStatus(`${getStatusName(res.status)}`);
 
         if (res.status === 4) {
-          // SEALED
-          console.log("Transaction sealed!");
-          setTxStatus("Transaction Sealed!");
-          Alert.alert("Success", "Transaction sealed on blockchain!");
+          Alert.alert("Success", "Transaction sealed on the blockchain!");
           cleanupTxSubscription();
         }
       });
     } catch (error: any) {
-      console.error("Transaction error - Full error object:", error);
-      console.error("Transaction error - Message:", error?.message);
-      console.error("Transaction error - Stack:", error?.stack);
-      Alert.alert("Transaction Error", error?.message || "Unknown error");
+      const message = error?.message || "Unknown error";
+      if (
+        !message.includes("cancel") &&
+        !message.includes("declined") &&
+        !message.includes("rejected")
+      ) {
+        Alert.alert("Transaction Error", message);
+      }
       setTxStatus("");
+      setIsSendingTx(false);
       cleanupTxSubscription();
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  // Show loading state only before first subscription update
+  const openFaucet = () => {
+    Linking.openURL("https://faucet.flow.com");
+  };
+
   if (!initialized) {
     return (
-      <ThemedView style={styles.container}>
+      <ThemedView style={styles.centerContainer}>
         <ActivityIndicator size="large" />
-        <ThemedText>Loading...</ThemedText>
+        <ThemedText style={styles.loadingText}>Initializing...</ThemedText>
       </ThemedView>
     );
   }
 
-  // Show authentication UI if not logged in (covers both null and false after initialization)
-  if (!user.loggedIn) {
-    const handleConnect = async () => {
-      try {
-        await fcl.authenticate(); // Auto-shows modal with wallet selection!
-      } catch (error: any) {
-        if (error.message !== 'User cancelled authentication') {
-          Alert.alert('Authentication Error', error.message);
-        }
-      }
-    };
-
-    return (
-      <ThemedView style={styles.container}>
-        <ThemedText type="title" style={styles.title}>
-          Flow Expo Starter
-        </ThemedText>
-        <ThemedText style={styles.subtitle}>
-          Connect your wallet to get started
-        </ThemedText>
-        <ThemedText style={styles.networkBadge}>
-          Network: {currentNetwork.toUpperCase()}
-        </ThemedText>
-
-        <Button title="Connect Wallet" onPress={handleConnect} />
-      </ThemedView>
-    );
-  }
-
-  // Show connected state with features
   return (
-    <ScrollView style={styles.scrollView}>
+    <ScrollView
+      style={styles.scrollView}
+      contentContainerStyle={styles.scrollContent}
+    >
       <ThemedView style={styles.container}>
-        <ThemedText type="title" style={styles.title}>
-          Flow Expo Starter
-        </ThemedText>
+        <View style={styles.topBar}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={FlowLogo}
+              style={styles.flowLogo}
+              resizeMode="contain"
+            />
+            <View style={styles.logoTextContainer}>
+              <ThemedText style={styles.flowText}>Flow</ThemedText>
+              <ThemedText style={styles.starterText}>Starter</ThemedText>
+            </View>
+          </View>
+          <View style={styles.networkBadge}>
+            <ThemedText style={styles.networkText}>
+              {currentNetwork.toUpperCase()}
+            </ThemedText>
+          </View>
+        </View>
 
-        <ThemedView style={styles.section}>
-          <ThemedText type="subtitle">Connected Wallet</ThemedText>
-          <ThemedText style={styles.networkBadge}>
-            Network: {currentNetwork.toUpperCase()}
-          </ThemedText>
-          <ThemedText style={styles.address}>{user.addr}</ThemedText>
-          <Button
-            title="Disconnect"
-            onPress={handleDisconnect}
-            color="#ff4444"
-          />
-        </ThemedView>
-
-        <ThemedView style={styles.section}>
-          <ThemedText type="subtitle">1. Execute Script</ThemedText>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <ThemedText style={styles.stepNumber}>1</ThemedText>
+            <ThemedText type="subtitle">Connect Wallet</ThemedText>
+          </View>
           <ThemedText style={styles.description}>
-            Read your Flow token balance from the blockchain
+            Connect your Flow wallet to interact with the blockchain.
           </ThemedText>
-          <Button
-            title="Get Balance"
-            onPress={handleExecuteScript}
-            disabled={isLoading}
-          />
+
+          {user.loggedIn ? (
+            <View style={styles.connectedContainer}>
+              <View style={styles.addressContainer}>
+                <ThemedText style={styles.addressLabel}>Connected</ThemedText>
+                <Text selectable style={styles.address}>
+                  {user.addr}
+                </Text>
+              </View>
+              <Pressable
+                style={styles.disconnectButton}
+                onPress={handleDisconnect}
+              >
+                <ThemedText style={styles.disconnectText}>
+                  Disconnect
+                </ThemedText>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable style={styles.primaryButton} onPress={handleConnect}>
+              <ThemedText style={styles.primaryButtonText}>
+                Connect Wallet
+              </ThemedText>
+            </Pressable>
+          )}
+        </View>
+
+        {currentNetwork === "testnet" && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.stepNumber}>2</ThemedText>
+              <ThemedText type="subtitle">Get Testnet FLOW</ThemedText>
+            </View>
+            <ThemedText style={styles.description}>
+              Fund your wallet with testnet FLOW tokens from the faucet.
+            </ThemedText>
+            <Pressable style={styles.secondaryButton} onPress={openFaucet}>
+              <ThemedText style={styles.secondaryButtonText}>
+                Open Faucet
+              </ThemedText>
+            </Pressable>
+          </View>
+        )}
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <ThemedText style={styles.stepNumber}>
+              {currentNetwork === "testnet" ? "3" : "2"}
+            </ThemedText>
+            <ThemedText type="subtitle">Query Balance</ThemedText>
+          </View>
+          <ThemedText style={styles.description}>
+            Read your FLOW token balance from the blockchain using a Cadence
+            script.
+          </ThemedText>
+          <Pressable
+            style={[
+              styles.primaryButton,
+              !user.loggedIn && styles.disabledButton,
+            ]}
+            onPress={handleGetBalance}
+            disabled={!user.loggedIn || isLoading}
+          >
+            <ThemedText style={styles.primaryButtonText}>
+              Get Balance
+            </ThemedText>
+          </Pressable>
           {scriptResult && (
-            <ThemedView style={styles.result}>
-              <ThemedText>{scriptResult}</ThemedText>
-            </ThemedView>
+            <View style={styles.resultContainer}>
+              <ThemedText style={styles.resultLabel}>Balance</ThemedText>
+              <ThemedText style={styles.resultValue}>{scriptResult}</ThemedText>
+            </View>
           )}
-        </ThemedView>
+        </View>
 
-        <ThemedView style={styles.section}>
-          <ThemedText type="subtitle">2. Send Transaction</ThemedText>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <ThemedText style={styles.stepNumber}>
+              {currentNetwork === "testnet" ? "4" : "3"}
+            </ThemedText>
+            <ThemedText type="subtitle">Send Transaction</ThemedText>
+          </View>
           <ThemedText style={styles.description}>
-            Send a simple transaction to the blockchain
+            Submit a transaction to the blockchain. This will require wallet
+            approval.
           </ThemedText>
-          <Button
-            title="Send Transaction"
+          <Pressable
+            style={[
+              styles.primaryButton,
+              (!user.loggedIn || isSendingTx) && styles.disabledButton,
+            ]}
             onPress={handleSendTransaction}
-            disabled={isLoading}
-          />
+            disabled={!user.loggedIn || isSendingTx}
+          >
+            <ThemedText style={styles.primaryButtonText}>
+              {isSendingTx ? "Sending..." : "Send Transaction"}
+            </ThemedText>
+          </Pressable>
           {txStatus && (
-            <ThemedView style={styles.result}>
-              <ThemedText>{txStatus}</ThemedText>
-            </ThemedView>
+            <View style={styles.resultContainer}>
+              <ThemedText style={styles.resultLabel}>Status</ThemedText>
+              <ThemedText style={styles.resultValue}>{txStatus}</ThemedText>
+            </View>
           )}
-        </ThemedView>
+        </View>
 
-        {isLoading && <ActivityIndicator size="large" style={styles.loader} />}
+        {isLoading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="small" color="#00EF8B" />
+          </View>
+        )}
       </ThemedView>
     </ScrollView>
   );
@@ -322,52 +345,171 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 1,
+  },
   container: {
     flex: 1,
     padding: 20,
+    paddingTop: 60,
   },
-  title: {
-    marginBottom: 10,
-    textAlign: "center",
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  subtitle: {
-    marginBottom: 20,
-    textAlign: "center",
+  loadingText: {
+    marginTop: 12,
+    opacity: 0.6,
+  },
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  flowLogo: {
+    width: 40,
+    height: 40,
+  },
+  logoTextContainer: {
+    flexDirection: "column",
+  },
+  flowText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#000",
+    lineHeight: 20,
+  },
+  starterText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#00EF8B",
+    lineHeight: 16,
   },
   networkBadge: {
-    textAlign: "center",
-    marginBottom: 10,
-    padding: 8,
-    backgroundColor: "rgba(0, 122, 255, 0.2)",
-    borderRadius: 5,
-    fontWeight: "bold",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#00EF8B",
+    borderRadius: 12,
   },
-  buttonContainer: {
-    marginTop: 20,
+  networkText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#000",
+    letterSpacing: 0.5,
   },
   section: {
-    marginVertical: 20,
-    padding: 15,
-    borderRadius: 10,
-    backgroundColor: "rgba(128, 128, 128, 0.1)",
+    marginBottom: 24,
+    padding: 20,
+    borderRadius: 16,
+    backgroundColor: "rgba(128, 128, 128, 0.08)",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 12,
+  },
+  stepNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#00EF8B",
+    color: "#000",
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 28,
+  },
+  description: {
+    fontSize: 14,
+    opacity: 0.7,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  connectedContainer: {
+    gap: 12,
+  },
+  addressContainer: {
+    padding: 12,
+    backgroundColor: "rgba(0, 239, 139, 0.1)",
+    borderRadius: 8,
+  },
+  addressLabel: {
+    fontSize: 12,
+    opacity: 0.6,
+    marginBottom: 4,
   },
   address: {
     fontFamily: "monospace",
-    marginVertical: 10,
-    fontSize: 12,
+    fontSize: 13,
+    color: "#11181C",
   },
-  description: {
-    marginBottom: 10,
-    opacity: 0.7,
+  primaryButton: {
+    backgroundColor: "#00EF8B",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  primaryButtonText: {
+    color: "#000",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  secondaryButton: {
+    backgroundColor: "transparent",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#00EF8B",
+  },
+  secondaryButtonText: {
+    color: "#00EF8B",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  disconnectButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+    backgroundColor: "rgba(255, 68, 68, 0.1)",
+  },
+  disconnectText: {
+    color: "#ff4444",
     fontSize: 14,
+    fontWeight: "500",
   },
-  result: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: "rgba(0, 255, 0, 0.1)",
-    borderRadius: 5,
+  disabledButton: {
+    opacity: 0.5,
   },
-  loader: {
-    marginTop: 20,
+  resultContainer: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: "rgba(0, 239, 139, 0.1)",
+    borderRadius: 8,
+  },
+  resultLabel: {
+    fontSize: 12,
+    opacity: 0.6,
+    marginBottom: 4,
+  },
+  resultValue: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  loadingOverlay: {
+    position: "absolute",
+    top: 20,
+    right: 20,
   },
 });
