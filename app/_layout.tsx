@@ -1,5 +1,4 @@
 // IMPORTANT: Flow config must be imported first (it includes crypto polyfill)
-// Initialize Flow configuration
 import "../config/flow";
 
 import { ConnectModalProvider } from "@onflow/fcl-react-native";
