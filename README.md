@@ -5,9 +5,8 @@ A minimal React Native / Expo starter template for building mobile apps on the F
 ## Features
 
 - Wallet connection via WalletConnect
-- Execute Cadence scripts (read from blockchain)
-- Send transactions (write to blockchain)
-- Light/Dark mode support
+- Execute Cadence scripts (read from the blockchain)
+- Send transactions (write to the blockchain)
 - Testnet and Mainnet support
 
 ## Prerequisites
@@ -36,25 +35,6 @@ npm start
    - Press `a` for Android Emulator
    - Scan the QR code with Expo Go on your phone
 
-## Project Structure
-
-```
-app/
-├── _layout.tsx          # Root layout with Flow providers
-└── (tabs)/
-    ├── _layout.tsx      # Tab navigation
-    └── index.tsx        # Main Flow screen
-components/
-├── themed-text.tsx      # Theme-aware text component
-└── themed-view.tsx      # Theme-aware view component
-config/
-└── flow.ts              # FCL configuration
-constants/
-└── theme.ts             # Color palette
-hooks/
-└── use-color-scheme.ts  # Theme detection
-```
-
 ## Configuration
 
 ### Changing Network
@@ -62,7 +42,7 @@ hooks/
 Edit `config/flow.ts` to switch between testnet and mainnet:
 
 ```typescript
-const currentNetwork = "testnet"; // Change to 'mainnet' for production
+export const currentNetwork = "testnet"; // Change to 'mainnet' for production
 ```
 
 ### Customizing App Details
@@ -90,7 +70,3 @@ Get your own project ID from [WalletConnect Cloud](https://cloud.walletconnect.c
 - [FCL Documentation](https://developers.flow.com/tools/clients/fcl-js)
 - [Cadence Language](https://cadence-lang.org/)
 - [Expo Documentation](https://docs.expo.dev/)
-
-## License
-
-MIT
