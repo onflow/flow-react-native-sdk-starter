@@ -1,50 +1,72 @@
-# Welcome to your Expo app 👋
+# Flow Expo Starter
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A minimal React Native / Expo starter template for building mobile apps on the Flow blockchain.
 
-## Get started
+## Features
 
-1. Install dependencies
+- Wallet connection via WalletConnect
+- Execute Cadence scripts (read from the blockchain)
+- Send transactions (write to the blockchain)
+- Testnet and Mainnet support
 
-   ```bash
-   npm install
-   ```
+## Prerequisites
 
-2. Start the app
+- Node.js 18+
+- [Expo CLI](https://docs.expo.dev/get-started/installation/)
+- iOS Simulator / Android Emulator or physical device
+- A Flow wallet (e.g., [Flow Wallet](https://wallet.flow.com))
 
-   ```bash
-   npx expo start
-   ```
+## Getting Started
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+1. Install dependencies:
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+2. Start the development server:
 
-## Learn more
+```bash
+npm start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+3. Run on your device:
+   - Press `i` for iOS Simulator
+   - Press `a` for Android Emulator
+   - Scan the QR code with Expo Go on your phone
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Configuration
 
-## Join the community
+### Changing Network
 
-Join our community of developers creating universal apps.
+Edit `config/flow.ts` to switch between testnet and mainnet:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```typescript
+export const currentNetwork = "testnet"; // Change to 'mainnet' for production
+```
+
+### Customizing App Details
+
+Update the app details in `config/flow.ts`:
+
+```typescript
+"app.detail.title": "Your App Name",
+"app.detail.url": "https://your-app.com",
+"app.detail.icon": "https://your-icon-url.png",
+"app.detail.description": "Your app description",
+```
+
+### WalletConnect Project ID
+
+Get your own project ID from [WalletConnect Cloud](https://cloud.walletconnect.com/) and update:
+
+```typescript
+"walletconnect.projectId": "your-project-id",
+```
+
+## Learn More
+
+- [Flow Documentation](https://developers.flow.com/)
+- [FCL Documentation](https://developers.flow.com/tools/clients/fcl-js)
+- [Cadence Language](https://cadence-lang.org/)
+- [Expo Documentation](https://docs.expo.dev/)
