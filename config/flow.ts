@@ -1,6 +1,3 @@
-// Crypto polyfill - must be imported first
-import "react-native-get-random-values";
-
 import * as fcl from "@onflow/fcl-react-native";
 import * as Crypto from "expo-crypto";
 import { LogBox } from "react-native";
