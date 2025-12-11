@@ -1,17 +1,22 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { currentNetwork } from "@/config/flow";
-import * as fcl from "@onflow/fcl-react-native";
-import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
+  Connect,
+  useFlowCurrentUser,
+  useFlowQuery,
+  useFlowMutate,
+  useFlowTransactionStatus,
+} from "@onflow/react-native-sdk";
+import * as fcl from "@onflow/fcl-react-native";
+import { useState, useEffect } from "react";
+import {
   Alert,
   Image,
   Linking,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 
@@ -29,91 +34,76 @@ const getStatusName = (status: number): string => {
   return statusNames[status] || "UNKNOWN";
 };
 
+// Cadence script to get FLOW balance
+const GET_BALANCE_SCRIPT = `
+  import FlowToken from 0x7e60df042a9c0868
+  import FungibleToken from 0x9a0766d93b6608b7
+
+  access(all) fun main(address: Address): UFix64 {
+    let account = getAccount(address)
+    let vaultRef = account.capabilities
+      .borrow<&FlowToken.Vault>(/public/flowTokenBalance)
+      ?? panic("Could not borrow Balance reference to the Vault")
+
+    return vaultRef.balance
+  }
+`;
+
+// Cadence transaction to log a message
+const LOG_MESSAGE_TX = `
+  transaction(message: String) {
+    prepare(signer: &Account) {
+      log(message)
+    }
+  }
+`;
+
 export default function FlowScreen() {
-  const [user, setUser] = useState<any>({ loggedIn: null });
-  const [initialized, setInitialized] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSendingTx, setIsSendingTx] = useState(false);
-  const [scriptResult, setScriptResult] = useState<string>("");
-  const [txStatus, setTxStatus] = useState<string>("");
+  const { user } = useFlowCurrentUser();
+  const [txId, setTxId] = useState<string | null>(null);
+  const [showSealedAlert, setShowSealedAlert] = useState(false);
 
-  const txUnsubscribeRef = useRef<(() => void) | null>(null);
+  // Query balance using react-native-sdk hook
+  const {
+    data: balance,
+    isLoading: isLoadingBalance,
+    refetch: refetchBalance,
+  } = useFlowQuery({
+    cadence: GET_BALANCE_SCRIPT,
+    args: (arg, t) => [arg(user?.addr ?? "", t.Address)],
+    query: {
+      enabled: !!user?.loggedIn && !!user?.addr,
+    },
+  });
 
-  const cleanupTxSubscription = () => {
-    if (txUnsubscribeRef.current) {
-      txUnsubscribeRef.current();
-      txUnsubscribeRef.current = null;
-    }
-  };
+  // Mutate hook for sending transactions
+  const { mutate: sendTransaction, isPending: isSendingTx } = useFlowMutate();
 
+  // Transaction status hook
+  const { transactionStatus: txStatus } = useFlowTransactionStatus({
+    id: txId,
+  });
+
+  // Show sealed alert when transaction is sealed
   useEffect(() => {
-    return () => cleanupTxSubscription();
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = fcl.currentUser.subscribe((userData: any) => {
-      setUser(userData);
-      if (!initialized) {
-        setInitialized(true);
-      }
-    });
-    return () => unsubscribe();
-  }, [initialized]);
-
-  const handleConnect = async () => {
-    try {
-      await fcl.authenticate();
-    } catch (error: any) {
-      if (error.message !== "User cancelled authentication") {
-        Alert.alert("Authentication Error", error.message);
-      }
+    if (txStatus?.status === 4 && txId && !showSealedAlert) {
+      setShowSealedAlert(true);
+      Alert.alert("Success", "Transaction sealed on the blockchain!");
+      setTxId(null);
+      setShowSealedAlert(false);
     }
-  };
-
-  const handleDisconnect = async () => {
-    cleanupTxSubscription();
-    await fcl.unauthenticate();
-    setScriptResult("");
-    setTxStatus("");
-  };
+  }, [txStatus?.status, txId, showSealedAlert]);
 
   const handleGetBalance = async () => {
-    if (!user.loggedIn) {
+    if (!user?.loggedIn) {
       Alert.alert("Error", "Please connect wallet first");
       return;
     }
-
-    setIsLoading(true);
-    setScriptResult("");
-
-    try {
-      const result = await fcl.query({
-        cadence: `
-          import FlowToken from 0x7e60df042a9c0868
-          import FungibleToken from 0x9a0766d93b6608b7
-
-          access(all) fun main(address: Address): UFix64 {
-            let account = getAccount(address)
-            let vaultRef = account.capabilities
-              .borrow<&FlowToken.Vault>(/public/flowTokenBalance)
-              ?? panic("Could not borrow Balance reference to the Vault")
-
-            return vaultRef.balance
-          }
-        `,
-        args: (arg: any, t: any) => [arg(user.addr, t.Address)],
-      });
-
-      setScriptResult(`${result} FLOW`);
-    } catch (error: any) {
-      Alert.alert("Script Error", error.message);
-    } finally {
-      setIsLoading(false);
-    }
+    refetchBalance();
   };
 
   const handleSendTransaction = async () => {
-    if (!user.loggedIn) {
+    if (!user?.loggedIn) {
       Alert.alert("Error", "Please connect wallet first");
       return;
     }
@@ -127,70 +117,38 @@ export default function FlowScreen() {
       return;
     }
 
-    cleanupTxSubscription();
-    setIsSendingTx(true);
-    setTxStatus("Sending...");
-
-    try {
-      const transactionId = await fcl.mutate({
-        cadence: `
-          transaction(message: String) {
-            prepare(signer: &Account) {
-              log(message)
-            }
-          }
-        `,
-        args: (arg: any, t: any) => [arg("Hello from Expo!", t.String)],
-        payer: fcl.authz as any,
-        proposer: fcl.authz as any,
-        authorizations: [fcl.authz as any],
+    sendTransaction(
+      {
+        cadence: LOG_MESSAGE_TX,
+        args: (arg: any, t: any) => [arg("Hello from Expo with react-native-sdk!", t.String)],
+        payer: fcl.authz,
+        proposer: fcl.authz,
+        authorizations: [fcl.authz],
         limit: 50,
-      });
-
-      if (!transactionId) {
-        setTxStatus("");
-        setIsSendingTx(false);
-        return;
+      },
+      {
+        onSuccess: (transactionId) => {
+          if (transactionId) {
+            setTxId(transactionId);
+          }
+        },
+        onError: (error: any) => {
+          const message = error?.message || "Unknown error";
+          if (
+            !message.includes("cancel") &&
+            !message.includes("declined") &&
+            !message.includes("rejected")
+          ) {
+            Alert.alert("Transaction Error", message);
+          }
+        },
       }
-
-      setTxStatus(`Submitted: ${transactionId.slice(0, 8)}...`);
-      setIsSendingTx(false);
-
-      txUnsubscribeRef.current = fcl.tx(transactionId).subscribe((res: any) => {
-        setTxStatus(`${getStatusName(res.status)}`);
-
-        if (res.status === 4) {
-          Alert.alert("Success", "Transaction sealed on the blockchain!");
-          cleanupTxSubscription();
-        }
-      });
-    } catch (error: any) {
-      const message = error?.message || "Unknown error";
-      if (
-        !message.includes("cancel") &&
-        !message.includes("declined") &&
-        !message.includes("rejected")
-      ) {
-        Alert.alert("Transaction Error", message);
-      }
-      setTxStatus("");
-      setIsSendingTx(false);
-      cleanupTxSubscription();
-    }
+    );
   };
 
   const openFaucet = () => {
     Linking.openURL("https://faucet.flow.com");
   };
-
-  if (!initialized) {
-    return (
-      <ThemedView style={styles.centerContainer}>
-        <ActivityIndicator size="large" />
-        <ThemedText style={styles.loadingText}>Initializing...</ThemedText>
-      </ThemedView>
-    );
-  }
 
   return (
     <ScrollView
@@ -226,30 +184,18 @@ export default function FlowScreen() {
             Connect your Flow wallet to interact with the blockchain.
           </ThemedText>
 
-          {user.loggedIn ? (
-            <View style={styles.connectedContainer}>
-              <View style={styles.addressContainer}>
-                <ThemedText style={styles.addressLabel}>Connected</ThemedText>
-                <Text selectable style={styles.address}>
-                  {user.addr}
-                </Text>
-              </View>
-              <Pressable
-                style={styles.disconnectButton}
-                onPress={handleDisconnect}
-              >
-                <ThemedText style={styles.disconnectText}>
-                  Disconnect
-                </ThemedText>
-              </Pressable>
-            </View>
-          ) : (
-            <Pressable style={styles.primaryButton} onPress={handleConnect}>
-              <ThemedText style={styles.primaryButtonText}>
-                Connect Wallet
-              </ThemedText>
-            </Pressable>
-          )}
+          {/* Using the Connect component from react-native-sdk */}
+          <Connect
+            onConnect={() => console.log("Connected!")}
+            onDisconnect={() => {
+              setTxId(null);
+              console.log("Disconnected!");
+            }}
+            style={styles.connectButton}
+            textStyle={styles.connectButtonText}
+            connectedStyle={styles.connectedButton}
+            connectedTextStyle={styles.connectedButtonText}
+          />
         </View>
 
         {currentNetwork === "testnet" && (
@@ -283,19 +229,19 @@ export default function FlowScreen() {
           <Pressable
             style={[
               styles.primaryButton,
-              !user.loggedIn && styles.disabledButton,
+              (!user?.loggedIn || isLoadingBalance) && styles.disabledButton,
             ]}
             onPress={handleGetBalance}
-            disabled={!user.loggedIn || isLoading}
+            disabled={!user?.loggedIn || isLoadingBalance}
           >
             <ThemedText style={styles.primaryButtonText}>
-              Get Balance
+              {isLoadingBalance ? "Loading..." : "Get Balance"}
             </ThemedText>
           </Pressable>
-          {scriptResult && (
+          {balance !== undefined && balance !== null && (
             <View style={styles.resultContainer}>
               <ThemedText style={styles.resultLabel}>Balance</ThemedText>
-              <ThemedText style={styles.resultValue}>{scriptResult}</ThemedText>
+              <ThemedText style={styles.resultValue}>{String(balance)} FLOW</ThemedText>
             </View>
           )}
         </View>
@@ -314,10 +260,10 @@ export default function FlowScreen() {
           <Pressable
             style={[
               styles.primaryButton,
-              (!user.loggedIn || isSendingTx) && styles.disabledButton,
+              (!user?.loggedIn || isSendingTx) && styles.disabledButton,
             ]}
             onPress={handleSendTransaction}
-            disabled={!user.loggedIn || isSendingTx}
+            disabled={!user?.loggedIn || isSendingTx}
           >
             <ThemedText style={styles.primaryButtonText}>
               {isSendingTx ? "Sending..." : "Send Transaction"}
@@ -326,16 +272,12 @@ export default function FlowScreen() {
           {txStatus && (
             <View style={styles.resultContainer}>
               <ThemedText style={styles.resultLabel}>Status</ThemedText>
-              <ThemedText style={styles.resultValue}>{txStatus}</ThemedText>
+              <ThemedText style={styles.resultValue}>
+                {getStatusName(txStatus.status)}
+              </ThemedText>
             </View>
           )}
         </View>
-
-        {isLoading && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="small" color="#00EF8B" />
-          </View>
-        )}
       </ThemedView>
     </ScrollView>
   );
@@ -352,15 +294,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     paddingTop: 60,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 12,
-    opacity: 0.6,
   },
   topBar: {
     flexDirection: "row",
@@ -433,23 +366,24 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     lineHeight: 20,
   },
-  connectedContainer: {
-    gap: 12,
+  connectButton: {
+    backgroundColor: "#00EF8B",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
   },
-  addressContainer: {
-    padding: 12,
-    backgroundColor: "rgba(0, 239, 139, 0.1)",
-    borderRadius: 8,
+  connectButtonText: {
+    color: "#000",
+    fontSize: 16,
+    fontWeight: "600",
   },
-  addressLabel: {
-    fontSize: 12,
-    opacity: 0.6,
-    marginBottom: 4,
+  connectedButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#00EF8B",
   },
-  address: {
-    fontFamily: "monospace",
-    fontSize: 13,
-    color: "#11181C",
+  connectedButtonText: {
+    color: "#00EF8B",
   },
   primaryButton: {
     backgroundColor: "#00EF8B",
@@ -477,18 +411,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  disconnectButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: "center",
-    backgroundColor: "rgba(255, 68, 68, 0.1)",
-  },
-  disconnectText: {
-    color: "#ff4444",
-    fontSize: 14,
-    fontWeight: "500",
-  },
   disabledButton: {
     opacity: 0.5,
   },
@@ -506,10 +428,5 @@ const styles = StyleSheet.create({
   resultValue: {
     fontSize: 16,
     fontWeight: "600",
-  },
-  loadingOverlay: {
-    position: "absolute",
-    top: 20,
-    right: 20,
   },
 });
