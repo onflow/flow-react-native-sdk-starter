@@ -325,7 +325,9 @@ export default function FlowScreen() {
 
               {isSuccess && txId && (
                 <View style={styles.successBox}>
-                  <Text style={styles.successText}>Transaction successful!</Text>
+                  <Text style={styles.successText}>
+                    Transaction successful!
+                  </Text>
                   <Pressable onPress={() => openFlowscan(txId as string)}>
                     <Text style={styles.linkText}>View on FlowScan</Text>
                   </Pressable>
