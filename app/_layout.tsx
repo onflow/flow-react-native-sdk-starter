@@ -13,6 +13,7 @@ import "react-native-reanimated";
 
 import { currentNetwork } from "@/config/flow";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import flowJson from "../flow.json";
 
 const flowConfig = {
   accessNodeUrl:
@@ -43,7 +44,7 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <FlowProvider config={flowConfig}>
+    <FlowProvider config={flowConfig} flowJson={flowJson}>
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
