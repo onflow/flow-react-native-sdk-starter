@@ -180,7 +180,6 @@ export default function FlowScreen() {
           </View>
         </View>
 
-        {/* Step 1: Connect Wallet */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.stepNumber}>1</Text>
@@ -192,7 +191,6 @@ export default function FlowScreen() {
           <Connect />
         </View>
 
-        {/* Step 2: Get Testnet Funds (testnet only) */}
         {isTestnet && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -221,7 +219,6 @@ export default function FlowScreen() {
           </View>
         )}
 
-        {/* Step 3: Check Balance */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.stepNumber}>{isTestnet ? "3" : "2"}</Text>
@@ -263,7 +260,6 @@ export default function FlowScreen() {
           )}
         </View>
 
-        {/* Step 4: Send FLOW */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.stepNumber}>{isTestnet ? "4" : "3"}</Text>
