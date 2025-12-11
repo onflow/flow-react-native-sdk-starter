@@ -1,15 +1,15 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { currentNetwork } from "@/config/flow";
+import * as fcl from "@onflow/fcl-react-native";
 import {
   Connect,
   useFlowCurrentUser,
-  useFlowQuery,
   useFlowMutate,
+  useFlowQuery,
   useFlowTransactionStatus,
 } from "@onflow/react-native-sdk";
-import * as fcl from "@onflow/fcl-react-native";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -120,7 +120,9 @@ export default function FlowScreen() {
     sendTransaction(
       {
         cadence: LOG_MESSAGE_TX,
-        args: (arg: any, t: any) => [arg("Hello from Expo with react-native-sdk!", t.String)],
+        args: (arg: any, t: any) => [
+          arg("Hello from Expo with react-native-sdk!", t.String),
+        ],
         payer: fcl.authz,
         proposer: fcl.authz,
         authorizations: [fcl.authz],
@@ -191,10 +193,6 @@ export default function FlowScreen() {
               setTxId(null);
               console.log("Disconnected!");
             }}
-            style={styles.connectButton}
-            textStyle={styles.connectButtonText}
-            connectedStyle={styles.connectedButton}
-            connectedTextStyle={styles.connectedButtonText}
           />
         </View>
 
@@ -241,7 +239,9 @@ export default function FlowScreen() {
           {balance !== undefined && balance !== null && (
             <View style={styles.resultContainer}>
               <ThemedText style={styles.resultLabel}>Balance</ThemedText>
-              <ThemedText style={styles.resultValue}>{String(balance)} FLOW</ThemedText>
+              <ThemedText style={styles.resultValue}>
+                {String(balance)} FLOW
+              </ThemedText>
             </View>
           )}
         </View>
