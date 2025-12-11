@@ -1,5 +1,3 @@
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
 import {
   Connect,
   useFlowConfig,
@@ -14,6 +12,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Text,
   TextInput,
   View,
 } from "react-native";
@@ -163,7 +162,7 @@ export default function FlowScreen() {
       style={styles.scrollView}
       contentContainerStyle={styles.scrollContent}
     >
-      <ThemedView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.topBar}>
           <View style={styles.logoContainer}>
             <Image
@@ -172,26 +171,24 @@ export default function FlowScreen() {
               resizeMode="contain"
             />
             <View style={styles.logoTextContainer}>
-              <ThemedText style={styles.flowText}>Flow</ThemedText>
-              <ThemedText style={styles.starterText}>Starter</ThemedText>
+              <Text style={styles.flowText}>Flow</Text>
+              <Text style={styles.starterText}>Starter</Text>
             </View>
           </View>
           <View style={styles.networkBadge}>
-            <ThemedText style={styles.networkText}>
-              {network.toUpperCase()}
-            </ThemedText>
+            <Text style={styles.networkText}>{network.toUpperCase()}</Text>
           </View>
         </View>
 
         {/* Step 1: Connect Wallet */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <ThemedText style={styles.stepNumber}>1</ThemedText>
-            <ThemedText type="subtitle">Connect Wallet</ThemedText>
+            <Text style={styles.stepNumber}>1</Text>
+            <Text style={styles.subtitle}>Connect Wallet</Text>
           </View>
-          <ThemedText style={styles.description}>
+          <Text style={styles.description}>
             Connect your Flow wallet to interact with the blockchain.
-          </ThemedText>
+          </Text>
           <Connect />
         </View>
 
@@ -199,28 +196,26 @@ export default function FlowScreen() {
         {isTestnet && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <ThemedText style={styles.stepNumber}>2</ThemedText>
-              <ThemedText type="subtitle">Get Testnet Funds</ThemedText>
+              <Text style={styles.stepNumber}>2</Text>
+              <Text style={styles.subtitle}>Get Testnet Funds</Text>
             </View>
-            <ThemedText style={styles.description}>
+            <Text style={styles.description}>
               Fund your wallet with testnet FLOW tokens from the faucet.
-            </ThemedText>
+            </Text>
             {address ? (
               <View style={styles.addressContainer}>
-                <ThemedText style={styles.addressText} numberOfLines={1}>
+                <Text style={styles.addressText} numberOfLines={1}>
                   {address}
-                </ThemedText>
+                </Text>
                 <Pressable style={styles.secondaryButton} onPress={openFaucet}>
-                  <ThemedText style={styles.secondaryButtonText}>
-                    Open Faucet
-                  </ThemedText>
+                  <Text style={styles.secondaryButtonText}>Open Faucet</Text>
                 </Pressable>
               </View>
             ) : (
               <View style={styles.placeholderBox}>
-                <ThemedText style={styles.placeholderText}>
+                <Text style={styles.placeholderText}>
                   Connect your wallet to see your address
-                </ThemedText>
+                </Text>
               </View>
             )}
           </View>
@@ -229,46 +224,40 @@ export default function FlowScreen() {
         {/* Step 3: Check Balance */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <ThemedText style={styles.stepNumber}>
-              {isTestnet ? "3" : "2"}
-            </ThemedText>
-            <ThemedText type="subtitle">Check Balance</ThemedText>
+            <Text style={styles.stepNumber}>{isTestnet ? "3" : "2"}</Text>
+            <Text style={styles.subtitle}>Check Balance</Text>
           </View>
-          <ThemedText style={styles.description}>
+          <Text style={styles.description}>
             Query your FLOW token balance using useFlowQuery
-          </ThemedText>
+          </Text>
           {!address ? (
             <View style={styles.placeholderBox}>
-              <ThemedText style={styles.placeholderText}>
+              <Text style={styles.placeholderText}>
                 Connect your wallet to see balance
-              </ThemedText>
+              </Text>
             </View>
           ) : isLoadingBalance ? (
             <View style={styles.loadingBox}>
-              <ThemedText style={styles.loadingText}>Loading...</ThemedText>
+              <Text style={styles.loadingText}>Loading...</Text>
             </View>
           ) : balanceError ? (
             <View style={styles.errorBox}>
-              <ThemedText style={styles.errorText}>
-                Error loading balance
-              </ThemedText>
+              <Text style={styles.errorText}>Error loading balance</Text>
             </View>
           ) : (
             <View>
               <View style={styles.balanceBox}>
-                <ThemedText style={styles.balanceLabel}>Balance</ThemedText>
-                <ThemedText style={styles.balanceValue}>
+                <Text style={styles.balanceLabel}>Balance</Text>
+                <Text style={styles.balanceValue}>
                   {balance ? String(balance) : "0.00"}
-                </ThemedText>
-                <ThemedText style={styles.balanceUnit}>FLOW</ThemedText>
+                </Text>
+                <Text style={styles.balanceUnit}>FLOW</Text>
               </View>
               <Pressable
                 style={styles.primaryButton}
                 onPress={() => refetchBalance()}
               >
-                <ThemedText style={styles.primaryButtonText}>
-                  Refresh
-                </ThemedText>
+                <Text style={styles.primaryButtonText}>Refresh</Text>
               </Pressable>
             </View>
           )}
@@ -277,26 +266,22 @@ export default function FlowScreen() {
         {/* Step 4: Send FLOW */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <ThemedText style={styles.stepNumber}>
-              {isTestnet ? "4" : "3"}
-            </ThemedText>
-            <ThemedText type="subtitle">Send FLOW</ThemedText>
+            <Text style={styles.stepNumber}>{isTestnet ? "4" : "3"}</Text>
+            <Text style={styles.subtitle}>Send FLOW</Text>
           </View>
-          <ThemedText style={styles.description}>
+          <Text style={styles.description}>
             Transfer tokens using useFlowMutate
-          </ThemedText>
+          </Text>
           {!address ? (
             <View style={styles.placeholderBox}>
-              <ThemedText style={styles.placeholderText}>
+              <Text style={styles.placeholderText}>
                 Connect your wallet to send FLOW
-              </ThemedText>
+              </Text>
             </View>
           ) : (
             <View>
               <View style={styles.inputContainer}>
-                <ThemedText style={styles.inputLabel}>
-                  Recipient Address
-                </ThemedText>
+                <Text style={styles.inputLabel}>Recipient Address</Text>
                 <TextInput
                   style={styles.textInput}
                   value={recipient}
@@ -309,7 +294,7 @@ export default function FlowScreen() {
               </View>
 
               <View style={styles.inputContainer}>
-                <ThemedText style={styles.inputLabel}>Amount (FLOW)</ThemedText>
+                <Text style={styles.inputLabel}>Amount (FLOW)</Text>
                 <TextInput
                   style={styles.textInput}
                   value={amount}
@@ -333,35 +318,31 @@ export default function FlowScreen() {
                 onPress={handleSend}
                 disabled={isPending || !recipient || !amount}
               >
-                <ThemedText style={styles.primaryButtonText}>
+                <Text style={styles.primaryButtonText}>
                   {isPending ? "Sending..." : "Send FLOW"}
-                </ThemedText>
+                </Text>
               </Pressable>
 
               {isSuccess && txId && (
                 <View style={styles.successBox}>
-                  <ThemedText style={styles.successText}>
-                    Transaction successful!
-                  </ThemedText>
+                  <Text style={styles.successText}>Transaction successful!</Text>
                   <Pressable onPress={() => openFlowscan(txId as string)}>
-                    <ThemedText style={styles.linkText}>
-                      View on FlowScan
-                    </ThemedText>
+                    <Text style={styles.linkText}>View on FlowScan</Text>
                   </Pressable>
                 </View>
               )}
 
               {error && (
                 <View style={styles.errorBox}>
-                  <ThemedText style={styles.errorText}>
+                  <Text style={styles.errorText}>
                     Transaction failed. Please try again.
-                  </ThemedText>
+                  </Text>
                 </View>
               )}
             </View>
           )}
         </View>
-      </ThemedView>
+      </View>
     </ScrollView>
   );
 }
@@ -369,6 +350,7 @@ export default function FlowScreen() {
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
+    backgroundColor: "#fff",
   },
   scrollContent: {
     flexGrow: 1,
@@ -442,10 +424,16 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
     lineHeight: 28,
+    overflow: "hidden",
+  },
+  subtitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000",
   },
   description: {
     fontSize: 14,
-    opacity: 0.7,
+    color: "rgba(0, 0, 0, 0.7)",
     marginBottom: 16,
     lineHeight: 20,
   },
@@ -456,7 +444,7 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: 14,
-    opacity: 0.5,
+    color: "rgba(0, 0, 0, 0.5)",
   },
   loadingBox: {
     padding: 24,
@@ -466,7 +454,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    opacity: 0.7,
+    color: "rgba(0, 0, 0, 0.7)",
   },
   errorBox: {
     padding: 12,
@@ -512,16 +500,17 @@ const styles = StyleSheet.create({
   },
   balanceLabel: {
     fontSize: 12,
-    opacity: 0.5,
+    color: "rgba(0, 0, 0, 0.5)",
     marginBottom: 4,
   },
   balanceValue: {
     fontSize: 32,
     fontWeight: "700",
+    color: "#000",
   },
   balanceUnit: {
     fontSize: 14,
-    opacity: 0.4,
+    color: "rgba(0, 0, 0, 0.4)",
     marginTop: 4,
   },
   addressContainer: {
@@ -530,7 +519,7 @@ const styles = StyleSheet.create({
   addressText: {
     fontSize: 12,
     fontFamily: "monospace",
-    opacity: 0.7,
+    color: "rgba(0, 0, 0, 0.7)",
     padding: 12,
     borderRadius: 12,
     backgroundColor: "rgba(0, 0, 0, 0.05)",
@@ -541,7 +530,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontWeight: "500",
-    opacity: 0.7,
+    color: "rgba(0, 0, 0, 0.7)",
     marginBottom: 8,
   },
   textInput: {
