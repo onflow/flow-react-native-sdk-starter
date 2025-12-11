@@ -4,7 +4,7 @@
     "slug": "flow-expo-starter",
     "version": "1.1.0",
     "orientation": "portrait",
-    "icon": "./assets/flow.png",
+    "icon": "./assets/app-icon.png",
     "scheme": "flowexpostarter",
     "newArchEnabled": true,
     "ios": {
@@ -13,7 +13,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#00EF8B",
-        "foregroundImage": "./assets/flow.png"
+        "foregroundImage": "./assets/app-icon.png"
       },
       "package": "com.anonymous.flowexpostarter"
     },
