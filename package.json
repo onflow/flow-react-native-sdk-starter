@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
-    "@onflow/fcl-react-native": "^1.16.1",
+    "@onflow/fcl-react-native": "^file:../fcl-js/packages/fcl-react-native",
     "@onflow/react-native-sdk": "file:../fcl-js/packages/react-native-sdk",
     "@tanstack/react-query": "^5.67.3",
     "viem": "^2.29.2",
