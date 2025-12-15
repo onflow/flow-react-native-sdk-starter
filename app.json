@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "flow-expo-starter",
-    "slug": "flow-expo-starter",
+    "name": "flow-react-native-sdk-starter",
+    "slug": "flow-react-native-sdk-starter",
     "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
-    "scheme": "flowexpostarter",
+    "scheme": "flowreactnativesdkstarter",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
@@ -15,7 +15,7 @@
         "backgroundColor": "#00EF8B",
         "foregroundImage": "./assets/app-icon.png"
       },
-      "package": "com.anonymous.flowexpostarter"
+      "package": "com.anonymous.flowreactnativesdkstarter"
     },
     "plugins": ["expo-router"],
     "experiments": {

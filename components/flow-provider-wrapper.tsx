@@ -17,7 +17,7 @@ export function FlowProviderWrapper({ children }: FlowProviderWrapperProps) {
         flowNetwork: "testnet",
 
         // App metadata
-        appDetailTitle: "Flow Expo Starter",
+        appDetailTitle: "Flow React Native SDK Starter",
         appDetailUrl: "https://flow.com",
         appDetailIcon: "https://avatars.githubusercontent.com/u/62387156?v=4",
         appDetailDescription: "A Flow blockchain starter app built with Expo",
