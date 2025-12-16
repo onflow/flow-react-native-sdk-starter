@@ -1,33 +1,15 @@
-// IMPORTANT: Flow config must be imported first (it includes crypto polyfill)
-import "../config/flow";
-
-import { ConnectModalProvider } from "@onflow/fcl-react-native";
-import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
-} from "@react-navigation/native";
+import { FlowProviderWrapper } from "@/components/flow-provider-wrapper";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import "react-native-reanimated";
-
-import { useColorScheme } from "@/hooks/use-color-scheme";
-
-export const unstable_settings = {
-  anchor: "(tabs)",
-};
+import { View } from "react-native";
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ConnectModalProvider>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </ConnectModalProvider>
+    <FlowProviderWrapper>
+      <View style={{ flex: 1, backgroundColor: "#fff" }}>
+        <Stack screenOptions={{ headerShown: false }} />
+      </View>
+      <StatusBar style="dark" />
+    </FlowProviderWrapper>
   );
 }

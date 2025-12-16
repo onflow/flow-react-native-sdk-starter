@@ -1,4 +1,4 @@
-# Flow Expo Starter
+# Flow React Native SDK Starter
 
 A minimal React Native / Expo starter template for building mobile apps on the Flow blockchain.
 

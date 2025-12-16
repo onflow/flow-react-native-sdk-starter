@@ -1,49 +1,25 @@
 {
   "expo": {
-    "name": "flow-expo-starter",
-    "slug": "flow-expo-starter",
-    "version": "1.0.0",
+    "name": "flow-react-native-sdk-starter",
+    "slug": "flow-react-native-sdk-starter",
+    "version": "1.1.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "flowexpostarter",
-    "userInterfaceStyle": "automatic",
+    "icon": "./assets/app-icon.png",
+    "scheme": "flowreactnativesdkstarter",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#00EF8B",
+        "foregroundImage": "./assets/app-icon.png"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.flowexpostarter"
+      "package": "com.anonymous.flowreactnativesdkstarter"
     },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
-        }
-      ]
-    ],
+    "plugins": ["expo-router"],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     }
   }
 }
