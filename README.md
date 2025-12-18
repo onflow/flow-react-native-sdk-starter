@@ -64,6 +64,30 @@ Get your own project ID from [WalletConnect Cloud](https://cloud.walletconnect.c
 "walletconnect.projectId": "your-project-id",
 ```
 
+## Expo Router Integration
+
+The SDK uses `wc-redirect` as the deeplink path for WalletConnect redirects. To prevent navigation flashes when the wallet redirects back to your app, this project includes a `+native-intent.tsx` file that intercepts the redirect:
+
+```typescript
+// app/+native-intent.tsx
+export function redirectSystemPath({
+  path,
+  initial,
+}: {
+  path: string;
+  initial: boolean;
+}): string {
+  if (path.includes("wc-redirect")) {
+    return "/";
+  }
+  return path;
+}
+```
+
+This ensures the app stays on the current screen when returning from a wallet instead of briefly showing a navigation flash.
+
+For more details, see [Expo Router Native Intent documentation](https://docs.expo.dev/router/advanced/native-intent/).
+
 ## Learn More
 
 - [Flow Documentation](https://developers.flow.com/)
