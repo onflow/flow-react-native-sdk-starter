@@ -1,5 +1,6 @@
 import {
   Connect,
+  Fund,
   useFlowConfig,
   useFlowCurrentUser,
   useFlowMutate,
@@ -222,6 +223,17 @@ export default function FlowScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.stepNumber}>{isTestnet ? "3" : "2"}</Text>
+            <Text style={styles.subtitle}>Fund Account</Text>
+          </View>
+          <Text style={styles.description}>
+            Add tokens to your wallet via credit card or crypto transfer.
+          </Text>
+          <Fund />
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.stepNumber}>{isTestnet ? "4" : "3"}</Text>
             <Text style={styles.subtitle}>Check Balance</Text>
           </View>
           <Text style={styles.description}>
@@ -262,7 +274,7 @@ export default function FlowScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.stepNumber}>{isTestnet ? "4" : "3"}</Text>
+            <Text style={styles.stepNumber}>{isTestnet ? "5" : "4"}</Text>
             <Text style={styles.subtitle}>Send FLOW</Text>
           </View>
           <Text style={styles.description}>
