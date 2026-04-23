@@ -1,6 +1,6 @@
-# Flow React Native SDK Starter
+# flow-react-native-sdk-starter — Expo Starter for Flow React Native SDK
 
-A minimal React Native / Expo starter template for building mobile apps on the Flow blockchain.
+A minimal React Native / Expo starter template for building mobile apps on the Flow network.
 
 ## Features
 
@@ -94,3 +94,12 @@ For more details, see [Expo Router Native Intent documentation](https://docs.exp
 - [FCL Documentation](https://developers.flow.com/tools/clients/fcl-js)
 - [Cadence Language](https://cadence-lang.org/)
 - [Expo Documentation](https://docs.expo.dev/)
+
+## About Flow
+
+This repo is part of the [Flow network](https://flow.com), a Layer 1 blockchain built for consumer applications, AI agents, and DeFi at scale.
+
+- Developer docs: https://developers.flow.com
+- Cadence language: https://cadence-lang.org
+- Community: [Flow Discord](https://discord.gg/flow) · [Flow Forum](https://forum.flow.com)
+- Governance: [Flow Improvement Proposals](https://github.com/onflow/flips)
